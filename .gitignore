@@ -1,0 +1,9 @@
+venv/
+.env
+__pycache__/
+*.pyc
+*.mp3
+*.wav
+response.json
+reply.mp3
+.vscode/
