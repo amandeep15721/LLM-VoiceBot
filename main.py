@@ -4,6 +4,7 @@ Pipeline: Audio in -> Groq Whisper (STT) -> Groq Llama 3.3 (LLM) -> ElevenLabs (
 """
 
 import os
+import time
 import base64
 import tempfile
 from typing import List, Dict
@@ -20,9 +21,6 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # default "Rachel" voice
-
-print(f"DEBUG - Key loaded: '{ELEVENLABS_API_KEY[:8]}...' (length: {len(ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else 0})")
-
 
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY not set. Add it to your .env file.")
@@ -60,6 +58,10 @@ class ChatResponse(BaseModel):
     transcript: str
     answer_text: str
     audio_base64: str  # MP3 audio, base64-encoded
+    stt_ms: int  # time spent transcribing audio
+    llm_ms: int  # time spent generating the answer
+    tts_ms: int  # time spent synthesizing speech
+    total_ms: int  # total pipeline time
 
 
 def transcribe_audio(file_path: str) -> str:
@@ -141,19 +143,35 @@ async def voice_query(
         tmp_path = tmp.name
 
     try:
+        pipeline_start = time.perf_counter()
+
+        stt_start = time.perf_counter()
         transcript = transcribe_audio(tmp_path)
+        stt_ms = int((time.perf_counter() - stt_start) * 1000)
+
         if not transcript:
             raise HTTPException(status_code=400, detail="Could not transcribe audio (empty result).")
 
+        llm_start = time.perf_counter()
         answer_text = get_llm_response(session_id, transcript)
+        llm_ms = int((time.perf_counter() - llm_start) * 1000)
+
+        tts_start = time.perf_counter()
         audio_bytes = synthesize_speech(answer_text)
+        tts_ms = int((time.perf_counter() - tts_start) * 1000)
+
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        total_ms = int((time.perf_counter() - pipeline_start) * 1000)
 
         return ChatResponse(
             session_id=session_id,
             transcript=transcript,
             answer_text=answer_text,
             audio_base64=audio_b64,
+            stt_ms=stt_ms,
+            llm_ms=llm_ms,
+            tts_ms=tts_ms,
+            total_ms=total_ms,
         )
     finally:
         os.remove(tmp_path)

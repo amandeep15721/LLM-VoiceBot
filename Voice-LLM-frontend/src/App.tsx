@@ -6,6 +6,12 @@ type AppState = 'idle' | 'recording' | 'processing' | 'speaking' | 'error'
 interface Message {
   role: 'user' | 'assistant'
   text: string
+  latency?: {
+    sttMs: number
+    llmMs: number
+    ttsMs: number
+    totalMs: number
+  }
 }
 
 const STATUS_LABEL: Record<AppState, string> = {
@@ -72,7 +78,16 @@ export default function App() {
       setMessages((prev) => [
         ...prev,
         { role: 'user', text: result.transcript },
-        { role: 'assistant', text: result.answer_text },
+        {
+          role: 'assistant',
+          text: result.answer_text,
+          latency: {
+            sttMs: result.stt_ms,
+            llmMs: result.llm_ms,
+            ttsMs: result.tts_ms,
+            totalMs: result.total_ms,
+          },
+        },
       ])
 
       playAudioResponse(result.audio_base64)
@@ -195,6 +210,12 @@ export default function App() {
                     {msg.role === 'user' ? 'You' : 'Assistant'}
                   </p>
                   {msg.text}
+                  {msg.latency && (
+                    <p className="font-mono text-[10px] text-muted mt-2 pt-2 border-t border-mist/10">
+                      STT {msg.latency.sttMs}ms · LLM {msg.latency.llmMs}ms · TTS {msg.latency.ttsMs}ms · Total{' '}
+                      {msg.latency.totalMs}ms
+                    </p>
+                  )}
                 </div>
               </div>
             ))

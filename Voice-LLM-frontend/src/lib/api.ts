@@ -8,6 +8,10 @@ export interface VoiceQueryResponse {
   transcript: string
   answer_text: string
   audio_base64: string
+  stt_ms: number
+  llm_ms: number
+  tts_ms: number
+  total_ms: number
 }
 
 /** Send a recorded audio blob to the backend and get back transcript + answer + spoken reply. */
