@@ -10,8 +10,9 @@ Built end-to-end (mic capture → STT → LLM → TTS → playback) in under a w
 ## Demo
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="TalkAI Frontend" width="800"/>
+  <img src="docs/Screenshot.png" alt="TalkAI Frontend" width="800"/>
 </p>
+
 ## Architecture
 
 ```mermaid
